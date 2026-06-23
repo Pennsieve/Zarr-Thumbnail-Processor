@@ -1,0 +1,7 @@
+services:
+  processor:
+    build: .
+    env_file: dev.env
+    volumes:
+      - ./test_inputs:/inputs:ro
+      - ./test_outputs:/outputs

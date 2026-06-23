@@ -1,0 +1,4 @@
+zarr>=3,<4
+numpy
+Pillow
+awslambdaric
