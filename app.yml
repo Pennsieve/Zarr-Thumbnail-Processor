@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://app.pennsieve.io/static/schemas/app-manifest.v1.json
+schemaVersion: '1.0'
+name: Thumbnail Generator
+description: generates a thumbnail for the pennsieve assets from a ome.zarr file
+applicationType: processor
+categories:
+  - Visualization
+runtime:
+  computeTypes:
+    - standard
+resources:
+  cpu: 4096
+  memory: 30720
+parameters:
+  - name: THUMBNAIL_SIZE
+    type: number
+    description: width and height of thumbnail. square
+    default: 256
