@@ -30,10 +30,10 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
 
     log.info(f"Array shape: {arr.shape}, dtype: {arr.dtype}")
 
-    # 3. Extract the middle slice along axis 0
-    mid = arr.shape[0] // 2
-    slice_2d = arr[mid, :, :]
-    log.info(f"Extracted middle slice at index {mid}, shape: {slice_2d.shape}")
+    # 3. Extract the middle XY slice (slice along Z, the last axis)
+    mid = arr.shape[2] // 2
+    slice_2d = arr[:, :, mid]
+    log.info(f"Extracted middle XY slice at Z={mid}, shape: {slice_2d.shape}")
 
     # 4. Normalize to 0–255 uint8
     smin, smax = float(slice_2d.min()), float(slice_2d.max())
