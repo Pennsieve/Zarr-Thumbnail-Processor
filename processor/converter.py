@@ -52,10 +52,19 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
     axes = multiscales[0].get("axes", [])
     log.info(f"Found {len(datasets)} resolution levels")
 
-    # 2. Use the lowest resolution level (last in the list)
-    lowest_level = datasets[-1]["path"]
-    log.info(f"Using lowest resolution level: {lowest_level}")
-    arr = root[lowest_level][:]
+    # 2. Pick the smallest resolution level that is >= thumbnail size
+    #    Fall back to the largest (first) level if none are big enough.
+    chosen_level = datasets[0]["path"]
+    for ds in reversed(datasets):
+        path = ds["path"]
+        level_arr = root[path]
+        # Last two dims are Y, X by OME-Zarr convention
+        y_size, x_size = level_arr.shape[-2], level_arr.shape[-1]
+        if min(y_size, x_size) >= config.thumbnail_size:
+            chosen_level = path
+            break
+    log.info(f"Using resolution level: {chosen_level}")
+    arr = root[chosen_level][:]
 
     log.info(f"Array shape: {arr.shape}, dtype: {arr.dtype}")
 
@@ -77,9 +86,14 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
         normalized = np.zeros_like(slice_2d, dtype=np.float64)
     img_array = normalized.astype(np.uint8)
 
-    # 5. Fit into thumbnail box preserving aspect ratio (no stretching)
+    # 5. Center-crop to square, then resize to thumbnail_size
     img = Image.fromarray(img_array, mode="L")
-    img.thumbnail((config.thumbnail_size, config.thumbnail_size), Image.LANCZOS)
+    w, h = img.size
+    side = min(w, h)
+    left = (w - side) // 2
+    top = (h - side) // 2
+    img = img.crop((left, top, left + side, top + side))
+    img = img.resize((config.thumbnail_size, config.thumbnail_size), Image.LANCZOS)
 
     # 6. Save as PNG
     img.save(output_path, format="PNG")
