@@ -60,11 +60,10 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
     axes = multiscales[0].get("axes", [])
     omero = root.attrs.get("omero", {})
     omero_channels = omero.get("channels", [])
-    # Detect RGB: 3 channels with R/G/B colors, regardless of rdefs.model
-    rgb_colors = {"FF0000", "00FF00", "0000FF"}
+    # Detect RGB: 3 channels labeled R, G, B (color-agnostic)
     is_rgb = (
         len(omero_channels) == 3
-        and {ch.get("color", "").upper() for ch in omero_channels} == rgb_colors
+        and {ch.get("label", "").upper() for ch in omero_channels} == {"R", "G", "B"}
     )
     log.info(f"Found {len(datasets)} resolution levels, is_rgb={is_rgb}")
 
