@@ -10,22 +10,21 @@ from processor.config import Config
 log = logging.getLogger(__name__)
 
 
-def _extract_xy_slice(arr: np.ndarray, axes: list[dict], is_rgb: bool) -> np.ndarray:
-    """Extract a single 2D XY slice from a multi-dimensional OME-Zarr array.
+def _build_slice_index(shape: tuple, axes: list[dict], is_rgb: bool) -> tuple:
+    """Build a slice index to extract a single 2D XY slice from a zarr array.
 
-    Uses the axes metadata to identify dimension roles (t, c, z, y, x) and
-    picks the middle index for any non-XY spatial dimension, channel 0, and
-    time 0. For RGB images, all 3 channels are kept and returned as (H, W, 3).
+    Returns a tuple that can be used to index the zarr array directly,
+    so only the needed chunks are read from disk (not the whole volume).
     """
     axis_names = [a["name"].lower() for a in axes]
-    log.info(f"Axes: {axis_names}, array shape: {arr.shape}")
+    log.info(f"Axes: {axis_names}, array shape: {shape}")
 
     idx = []
     for i, name in enumerate(axis_names):
         if name in ("x", "y"):
             idx.append(slice(None))
         elif name == "z":
-            mid = arr.shape[i] // 2
+            mid = shape[i] // 2
             log.info(f"Slicing Z axis (dim {i}) at index {mid}")
             idx.append(mid)
         elif name == "c" and is_rgb:
@@ -34,9 +33,11 @@ def _extract_xy_slice(arr: np.ndarray, axes: list[dict], is_rgb: bool) -> np.nda
             # t, c (non-RGB), or any other leading dimension — take first
             idx.append(0)
 
-    slice_2d = arr[tuple(idx)]
+    return tuple(idx)
 
-    # For RGB, channel is first remaining dim: (C, H, W) → (H, W, C)
+
+def _postprocess_slice(slice_2d: np.ndarray, is_rgb: bool) -> np.ndarray:
+    """Transpose RGB channels and drop alpha if needed."""
     if is_rgb and slice_2d.ndim == 3 and slice_2d.shape[0] in (3, 4):
         slice_2d = slice_2d.transpose(1, 2, 0)
         if slice_2d.shape[2] == 4:
@@ -79,18 +80,25 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
             chosen_level = path
             break
     log.info(f"Using resolution level: {chosen_level}")
-    arr = root[chosen_level][:]
+    zarr_arr = root[chosen_level]
 
-    log.info(f"Array shape: {arr.shape}, dtype: {arr.dtype}")
+    log.info(f"Array shape: {zarr_arr.shape}, dtype: {zarr_arr.dtype}")
 
-    # 3. Extract an XY slice using axes metadata
+    # 3. Extract an XY slice — index the zarr array directly so only
+    #    the needed chunks are read from disk, not the whole volume.
     if axes:
-        slice_2d = _extract_xy_slice(arr, axes, is_rgb)
+        idx = _build_slice_index(zarr_arr.shape, axes, is_rgb)
+        slice_2d = zarr_arr[idx]
+        if not isinstance(slice_2d, np.ndarray):
+            slice_2d = np.array(slice_2d)
+        slice_2d = _postprocess_slice(slice_2d, is_rgb)
     else:
         # Fallback: assume last two dims are Y, X (OME-Zarr convention)
-        extra = arr.ndim - 2
-        idx = tuple(s // 2 if i < extra else slice(None) for i, s in enumerate(arr.shape))
-        slice_2d = arr[idx]
+        extra = zarr_arr.ndim - 2
+        idx = tuple(s // 2 if i < extra else slice(None) for i, s in enumerate(zarr_arr.shape))
+        slice_2d = zarr_arr[idx]
+        if not isinstance(slice_2d, np.ndarray):
+            slice_2d = np.array(slice_2d)
         log.info(f"No axes metadata; assumed last two dims are YX, shape: {slice_2d.shape}")
 
     # 4. Normalize to 0–255 uint8
