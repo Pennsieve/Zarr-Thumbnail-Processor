@@ -109,15 +109,14 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
         normalized = np.zeros_like(slice_2d, dtype=np.float64)
     img_array = normalized.astype(np.uint8)
 
-    # 5. Center-crop to square, then resize to thumbnail_size
+    # 5. Fit image into a square thumbnail with black letterboxing
     pil_mode = "RGB" if is_rgb and img_array.ndim == 3 else "L"
     img = Image.fromarray(img_array, mode=pil_mode)
-    w, h = img.size
-    side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
-    img = img.crop((left, top, left + side, top + side))
-    img = img.resize((config.thumbnail_size, config.thumbnail_size), Image.LANCZOS)
+    img.thumbnail((config.thumbnail_size, config.thumbnail_size), Image.LANCZOS)
+    thumb = Image.new(pil_mode, (config.thumbnail_size, config.thumbnail_size), 0)
+    offset = ((config.thumbnail_size - img.width) // 2, (config.thumbnail_size - img.height) // 2)
+    thumb.paste(img, offset)
+    img = thumb
 
     # 6. Save as PNG
     img.save(output_path, format="PNG")
