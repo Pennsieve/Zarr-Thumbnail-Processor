@@ -8,7 +8,10 @@ Pennsieve workflow processor that generates a 256x256 PNG thumbnail from an OME-
 2. Reads OME-Zarr multiscale metadata to find available resolution levels
 3. Loads the **lowest resolution level** (smallest data, fastest)
 4. Extracts the **middle slice** along axis 0
-5. Normalizes pixel values to 0–255 and resizes to the configured thumbnail size
+5. Converts to 0–255 and resizes to the configured thumbnail size:
+   - **RGB** (3 `omero` channels labelled R, G, B): kept as color
+   - **Multichannel** (more than one `omero` channel, e.g. fluorescence): each channel is scaled by its `omero` window, tinted with its `omero` color, and the channels are added together, as in the viewer
+   - **Anything else**: the first channel, min/max normalized to grayscale
 6. Saves as PNG to the output directory
 
 ## Configuration
