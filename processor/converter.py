@@ -106,11 +106,12 @@ def generate_thumbnail(input_path: str, output_path: str, config: Config) -> Non
         len(omero_channels) == 3
         and {ch.get("label", "").upper() for ch in omero_channels} == {"R", "G", "B"}
     )
-    # Multichannel (e.g. fluorescence): several omero channels that aren't RGB,
-    # matching the c axis. These are composited in their omero colors.
+    # Colored channels (e.g. fluorescence): omero channels that aren't RGB,
+    # matching the c axis, composited in their omero colors. This includes a
+    # single channel with a color; without omero the image stays grayscale.
     axis_names = [a["name"].lower() for a in axes]
     c_size = root[datasets[0]["path"]].shape[axis_names.index("c")] if "c" in axis_names else 1
-    is_multichannel = not is_rgb and len(omero_channels) > 1 and c_size == len(omero_channels)
+    is_multichannel = not is_rgb and len(omero_channels) >= 1 and c_size == len(omero_channels)
     log.info(f"Found {len(datasets)} resolution levels, is_rgb={is_rgb}, is_multichannel={is_multichannel}")
 
     # 2. Pick the smallest resolution level that is >= thumbnail size

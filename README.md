@@ -10,7 +10,7 @@ Pennsieve workflow processor that generates a 256x256 PNG thumbnail from an OME-
 4. Extracts the **middle slice** along axis 0
 5. Converts to 0–255 and resizes to the configured thumbnail size:
    - **RGB** (3 `omero` channels labelled R, G, B): kept as color
-   - **Multichannel** (more than one `omero` channel, e.g. fluorescence): each channel is scaled by its `omero` window, tinted with its `omero` color, and the channels are added together, as in the viewer
+   - **Colored channels** (one or more non-RGB `omero` channels, e.g. fluorescence): each channel is scaled by its `omero` window, tinted with its `omero` color, and the channels are added together, as in the viewer
    - **Anything else**: the first channel, min/max normalized to grayscale
 6. Saves as PNG to the output directory
 
