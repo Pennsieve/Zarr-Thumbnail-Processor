@@ -10,6 +10,21 @@ runtime:
   memory: 30720
   computeTypes:
     - standard
+inputs:
+  - name: image
+    required: true
+    description: An OME-Zarr image store; INPUT_DIR is the store itself.
+    mediaTypes:
+      - application/vnd.pennsieve.ome-zarr
+    formats:
+      - format_3915
+outputs:
+  - name: thumbnail
+    description: thumbnail.png in OUTPUT_DIR, THUMBNAIL_SIZE pixels square.
+    mediaTypes:
+      - image/png
+    formats:
+      - format_3603
 parameters:
   - name: THUMBNAIL_SIZE
     type: integer
